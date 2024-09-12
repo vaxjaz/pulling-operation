@@ -115,7 +115,13 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
             this.strategy = property.strategy();
         }
         this.operationProvider = providers;
-        this.pullTask = new ScheduledThreadPoolExecutor(
+        customerPull(defaultPullTask());
+        customerWorker(ForkJoinPool.commonPool());
+        run();
+    }
+
+    private ScheduledThreadPoolExecutor defaultPullTask() {
+        return new ScheduledThreadPoolExecutor(
                 Math.min(5, pullSize), // 核心线程数
                 r -> {
                     AtomicInteger count = new AtomicInteger();
@@ -127,8 +133,6 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
                 }, // 自定义线程工厂
                 new ThreadPoolExecutor.DiscardPolicy() // 自定义拒绝策略
         );
-        customerWorker(ForkJoinPool.commonPool());
-        run();
     }
 
     @Override
@@ -136,6 +140,10 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
 
     protected void customerWorker(Executor worker) {
         this.worker = worker;
+    }
+
+    protected void customerPull(ScheduledThreadPoolExecutor executor) {
+        this.pullTask = executor;
     }
 
 }
