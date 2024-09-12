@@ -1,6 +1,8 @@
 package com.vaxjaz.polling.operation.ops.impl;
 
+import com.vaxjaz.polling.operation.anno.PollingOpProperty;
 import com.vaxjaz.polling.operation.dto.SomeThing;
+import com.vaxjaz.polling.operation.enums.PollingStrategyEnum;
 import com.vaxjaz.polling.operation.ops.AbstractOperation;
 import com.vaxjaz.polling.operation.ops.provider.CustomerOpeProvider;
 import com.vaxjaz.polling.operation.ops.provider.OperationProviders;
@@ -12,6 +14,7 @@ import java.util.function.Function;
 
 @Component
 @Slf4j
+@PollingOpProperty(pullDuration = 3000L, pullTask = 10, workerTask = 500, strategy = PollingStrategyEnum.FIXED_THEN_IMMEDIATELY)
 public class MyOperation extends AbstractOperation<SomeThing, Redistemplate> {
 
     @Override

@@ -1,5 +1,7 @@
 package com.vaxjaz.polling.operation.ops;
 
+import com.vaxjaz.polling.operation.anno.PollingOpProperty;
+import com.vaxjaz.polling.operation.enums.PollingStrategyEnum;
 import com.vaxjaz.polling.operation.ops.provider.OperationProviders;
 import lombok.extern.slf4j.Slf4j;
 
@@ -18,6 +20,14 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
     private Executor worker;
 
     private ScheduledExecutorService pullTask;
+
+    private long pullPeriod = 2000L;
+
+    private int pullSize = 5;
+
+    private int workSize = 100;
+
+    private PollingStrategyEnum strategy = PollingStrategyEnum.FIXED_THEN_IMMEDIATELY;
 
     @Override
     public abstract void doOnNext(T t);
@@ -43,12 +53,12 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
     }
 
     private void doPull(AtomicInteger pullTaskSize, AtomicInteger backPressure) {
-        if (pullTaskSize.incrementAndGet() > 5) {
+        if (pullTaskSize.incrementAndGet() > pullSize) {
             pullTaskSize.decrementAndGet();
             log.info("pull task size reach limited {}", pullTaskSize.get());
             return;
         }
-        if (backPressure.incrementAndGet() > 100) {
+        if (backPressure.incrementAndGet() > workSize) {
             backPressure.decrementAndGet();
             log.info("worker task size reach limited {}", backPressure.get());
             return;
@@ -56,9 +66,15 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
         try {
             T apply = doOperation().apply(operationProvider);
             doWork(backPressure, apply);
-            if (Objects.nonNull(apply)) {
-                // 如果有值，立马pull，否则走scheduleAtFixedRate
-                pullImmediately(pullTaskSize, backPressure);
+            switch (strategy) {
+                case FIXED_THEN_IMMEDIATELY:
+                    if (Objects.nonNull(apply)) {
+                        // 如果有值，立马pull，否则走scheduleAtFixedRate
+                        pullImmediately(pullTaskSize, backPressure);
+                    }
+                    break;
+                case FIXED:
+                    // do nothing
             }
         } catch (Exception e) {
             log.error("customer pull error e", e);
@@ -93,6 +109,13 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
         if (Objects.isNull(providers)) {
             throw new RuntimeException("operationProvider is null");
         }
+        PollingOpProperty property = this.getClass().getAnnotation(PollingOpProperty.class);
+        if (Objects.nonNull(property)) {
+            this.pullPeriod = property.pullDuration();
+            this.pullSize = property.pullTask();
+            this.workSize = property.workerTask();
+            this.strategy = property.strategy();
+        }
         this.operationProvider = providers;
         this.pullTask = new ScheduledThreadPoolExecutor(
                 2, // 核心线程数
@@ -106,7 +129,7 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
                 }, // 自定义线程工厂
                 new ThreadPoolExecutor.DiscardPolicy() // 自定义拒绝策略
         );
-        pullPeriod(2000L);
+        pullPeriod(pullPeriod);
         customerWorker(ForkJoinPool.commonPool());
         run();
     }
