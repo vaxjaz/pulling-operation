@@ -21,8 +21,6 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
 
     private ScheduledExecutorService pullTask;
 
-    private long pullPeriod = 2000L;
-
     private int pullSize = 5;
 
     private int workSize = 100;
@@ -111,14 +109,14 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
         }
         PollingOpProperty property = this.getClass().getAnnotation(PollingOpProperty.class);
         if (Objects.nonNull(property)) {
-            this.pullPeriod = property.pullDuration();
+            this.periodMillsSeconds = property.pullDuration();
             this.pullSize = property.pullTask();
             this.workSize = property.workerTask();
             this.strategy = property.strategy();
         }
         this.operationProvider = providers;
         this.pullTask = new ScheduledThreadPoolExecutor(
-                2, // 核心线程数
+                Math.min(5, pullSize), // 核心线程数
                 r -> {
                     AtomicInteger count = new AtomicInteger();
                     Thread thread = new Thread(r);
@@ -129,17 +127,12 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
                 }, // 自定义线程工厂
                 new ThreadPoolExecutor.DiscardPolicy() // 自定义拒绝策略
         );
-        pullPeriod(pullPeriod);
         customerWorker(ForkJoinPool.commonPool());
         run();
     }
 
     @Override
     public abstract OperationProviders<R> loadOperation();
-
-    protected void pullPeriod(Long periodMillsSeconds) {
-        this.periodMillsSeconds = periodMillsSeconds;
-    }
 
     protected void customerWorker(Executor worker) {
         this.worker = worker;
