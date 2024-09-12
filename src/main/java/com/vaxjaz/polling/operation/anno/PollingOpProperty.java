@@ -17,6 +17,6 @@ public @interface PollingOpProperty {
 
     long pullDuration() default 2000L;
 
-    PollingStrategyEnum strategy() default PollingStrategyEnum.FIXED_THEN_IMMEDIATELY;
+    PollingStrategyEnum strategy() default PollingStrategyEnum.FIXED;
 
 }

@@ -27,7 +27,7 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
 
     private int workSize = 100;
 
-    private PollingStrategyEnum strategy = PollingStrategyEnum.FIXED_THEN_IMMEDIATELY;
+    private PollingStrategyEnum strategy = PollingStrategyEnum.FIXED;
 
     @Override
     public abstract void doOnNext(T t);
