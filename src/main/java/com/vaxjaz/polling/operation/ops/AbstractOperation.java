@@ -15,7 +15,7 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
 
     private OperationProviders<R> operationProvider;
 
-    private Long periodMillsSeconds;
+    private long periodMillsSeconds = 2000L;
 
     private Executor worker;
 
