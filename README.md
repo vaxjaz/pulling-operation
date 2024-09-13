@@ -19,36 +19,62 @@ This project is a custom framework designed to implement polling tasks and proce
 * The framework supports asynchronous execution of polling and task processing, with backpressure mechanisms to adjust PollingOpProperty based on task processing performance.
 
 ### Usage
-Define your custom polling operation by extend AbstractOperation
+* first
+```xml
+  <dependency>
+    <groupId>io.github.vaxjaz</groupId>
+    <artifactId>polling-operation-starter</artifactId>
+    <version>1.0.0</version>
+  </dependency>
+```
+* Define your custom polling operation by extend AbstractOperation
 ```java
 @Component
 @Slf4j
 @PollingOpProperty(pullDuration = 3000L, pullTask = 10, workerTask = 500, strategy = PollingStrategyEnum.FIXED_THEN_IMMEDIATELY)
-public class MyOperation extends AbstractOperation<SomeThing, Redistemplate> {
+public class MyOperation extends AbstractOperation<MyOperation.DataDto, MyOperation.RichSourceReader> {
 
     @Override
-    public void doOnNext(SomeThing someThing) {
-
+    public void doOnNext(MyOperation.DataDto category) {
+        // business code
     }
 
     @Override
-    public Function<OperationProviders<Redistemplate>, SomeThing> doOperation() {
-        return pros -> {
-            Redistemplate provider = pros.get();
-            //
-            return provider.doSomething();
+    public Function<OperationProviders<RichSourceReader>, MyOperation.DataDto> doOperation() {
+        return op -> {
+            return op.get().doSomeThing();
         };
     }
 
     @Override
-    public OperationProviders<Redistemplate> loadOperation() {
-        return new CustomerOpeProvider(new Redistemplate());
+    public Void onException(Throwable throwable, DataDto dataDto) {
+        log.error("e", throwable);
+        return null;
     }
 
     @Override
-    public Void onException(Throwable throwable, SomeThing someThing) {
-        log.error("t", throwable);
-        return null;
+    public OperationProviders<RichSourceReader> loadOperation() {
+        return new OperationProviders<RichSourceReader>(new RichSourceReader()) {
+            @Override
+            public RichSourceReader get() {
+                return super.get();
+            }
+        };
     }
+
+    @Data
+    public static class DataDto {
+
+    }
+
+    @Data
+    public static class RichSourceReader {
+        // read mysql redis ...
+        public DataDto doSomeThing() {
+            return null;
+        }
+    }
+
 }
+
 ```
