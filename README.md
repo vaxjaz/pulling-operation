@@ -25,7 +25,7 @@ This project is a custom framework designed to implement polling tasks and proce
   <dependency>
     <groupId>io.github.vaxjaz</groupId>
     <artifactId>polling-operation-starter</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
   </dependency>
 ```
 * Define your custom polling operation by extend AbstractOperation
