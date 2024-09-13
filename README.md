@@ -17,7 +17,7 @@ This project is a custom framework designed to implement polling tasks and proce
 
 3.Asynchronous Task Handling:
 * The framework supports asynchronous execution of polling and task processing, with backpressure mechanisms to adjust PollingOpProperty based on task processing performance.
-* Call back when the service work is abnormal
+* Call back when the service work is exception
 
 ### Usage
 * first import dependency
