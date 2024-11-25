@@ -65,23 +65,18 @@ public abstract class AbstractOperation<T> implements Operation<T> {
             log.info("worker task size reach limited {}", backPressure.get());
             return;
         }
-        try {
-            T apply = pull(pullTaskSize);
-            CompletableFuture<Void> future = doWork(backPressure, apply);
-            pullTaskSize.decrementAndGet();
-            switch (strategy) {
-                case FIXED_THEN_IMMEDIATELY:
-                    if (Objects.nonNull(apply)) {
-                        // 如果有值，立马pull，否则走scheduleAtFixedRate
-                        pullImmediately(pullTaskSize, backPressure);
-                    }
-                    break;
-                case FIXED:
-                    // do nothing
-            }
-        } catch (Throwable e) {
-            log.error("customer pull error e", e);
-            pullTaskSize.decrementAndGet();
+        T apply = pull(pullTaskSize);
+        CompletableFuture<Void> future = doWork(backPressure, apply);
+        pullTaskSize.decrementAndGet();
+        switch (strategy) {
+            case FIXED_THEN_IMMEDIATELY:
+                if (Objects.nonNull(apply)) {
+                    // 如果有值，立马pull，否则走scheduleAtFixedRate
+                    pullImmediately(pullTaskSize, backPressure);
+                }
+                break;
+            case FIXED:
+                // do nothing
         }
     }
 
