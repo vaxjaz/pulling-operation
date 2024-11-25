@@ -68,6 +68,7 @@ public abstract class AbstractOperation<T> implements Operation<T> {
         try {
             T apply = doOperation().get();
             CompletableFuture<Void> future = doWork(backPressure, apply);
+            pullTaskSize.decrementAndGet();
             switch (strategy) {
                 case FIXED_THEN_IMMEDIATELY:
                     if (Objects.nonNull(apply)) {
@@ -78,9 +79,8 @@ public abstract class AbstractOperation<T> implements Operation<T> {
                 case FIXED:
                     // do nothing
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             log.error("customer pull error e", e);
-        } finally {
             pullTaskSize.decrementAndGet();
         }
     }
