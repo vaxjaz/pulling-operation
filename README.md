@@ -9,8 +9,8 @@ This project is a custom framework designed to implement polling tasks and proce
 ### Core Components
 1.Operation Interface:
 
-* loadOperation(): Loads user-defined polling strategies.
-* doOperation(): Executes the polling operation based on the loaded strategy and returns tasks for further processing.
+* submit(): Task submission.
+* doOperation(): Executes the polling operation based on the custom logic strategy and returns tasks for further processing.
 
 2.PollingOpProperty:
 * This property defines the key configurations for the polling mechanism, including the polling interval and task processing strategies.
