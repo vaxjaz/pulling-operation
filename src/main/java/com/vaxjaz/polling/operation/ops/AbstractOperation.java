@@ -99,7 +99,7 @@ public abstract class AbstractOperation<T> implements Operation<T> {
                     backPressure.decrementAndGet();
                     if (Objects.nonNull(throwable)) {
                         log.error("worker task error ", throwable);
-                    } else {
+                    } else if (Objects.nonNull(apply)) {
                         onSuccess(apply);
                     }
                 })
