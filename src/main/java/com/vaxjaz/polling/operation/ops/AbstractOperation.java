@@ -66,7 +66,7 @@ public abstract class AbstractOperation<T> implements Operation<T> {
             return;
         }
         try {
-            T apply = doOperation().get();
+            T apply = pull(pullTaskSize);
             CompletableFuture<Void> future = doWork(backPressure, apply);
             pullTaskSize.decrementAndGet();
             switch (strategy) {
@@ -83,6 +83,18 @@ public abstract class AbstractOperation<T> implements Operation<T> {
             log.error("customer pull error e", e);
             pullTaskSize.decrementAndGet();
         }
+    }
+
+    private T pull(AtomicInteger pullTaskSize) {
+        T apply = null;
+        try {
+            apply = doOperation().get();
+            pullTaskSize.decrementAndGet();
+        } catch (Throwable e) {
+            log.error("e", e);
+            pullTaskSize.decrementAndGet();
+        }
+        return apply;
     }
 
     private void pullImmediately(AtomicInteger pullTaskSize, AtomicInteger backPressure) {
