@@ -1,15 +1,17 @@
 package com.vaxjaz.polling.operation.ops;
 
-import com.vaxjaz.polling.operation.ops.provider.OperationProviders;
+import java.util.function.Supplier;
 
-import java.util.function.Function;
-
-public interface Operation<T, R> {
-    OperationProviders<R> loadOperation();
+public interface Operation<T> {
 
     void doOnNext(T t);
 
     Void onException(Throwable throwable, T t);
 
-    Function<OperationProviders<R>, T> doOperation();
+    void onSuccess(T t);
+
+    void submit(T t);
+
+    Supplier<T> doOperation();
+
 }

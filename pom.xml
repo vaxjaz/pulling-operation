@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.vaxjaz</groupId>
     <artifactId>polling-operation-starter</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <name>polling-operation</name>
     <description>polling-operation</description>
     <parent>
@@ -50,6 +50,12 @@
             <artifactId>lombok</artifactId>
             <version>1.18.28</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>3.3.20.RELEASE</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 

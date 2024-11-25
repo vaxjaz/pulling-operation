@@ -25,55 +25,49 @@ This project is a custom framework designed to implement polling tasks and proce
   <dependency>
     <groupId>io.github.vaxjaz</groupId>
     <artifactId>polling-operation-starter</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
   </dependency>
 ```
 * Define your custom polling operation by extend AbstractOperation
 ```java
 @Component
 @Slf4j
-@PollingOpProperty(pullDuration = 3000L, pullTask = 10, workerTask = 500, strategy = PollingStrategyEnum.FIXED_THEN_IMMEDIATELY)
-public class MyOperation extends AbstractOperation<MyOperation.DataDto, MyOperation.RichSourceReader> {
+@PollingOpProperty(pullDuration = 3000L, pullTask = 1, workerTask = 500, strategy = PollingStrategyEnum.FIXED_THEN_IMMEDIATELY)
+public class MyOperation extends AbstractOperation<MyOperation.DataDto> {
 
     @Override
-    public void doOnNext(MyOperation.DataDto category) {
-        // business code
+    public void submit(MyOperation.DataDto task) {
+        log.info("submit {}", task);
     }
 
     @Override
-    public Function<OperationProviders<RichSourceReader>, MyOperation.DataDto> doOperation() {
-        return op -> {
-            return op.get().doSomeThing();
+    public void onSuccess(MyOperation.DataDto task) {
+        log.info("success {}", task);
+    }
+
+    @Override
+    public void doOnNext(MyOperation.DataDto task) {
+        log.info("do work");
+    }
+
+    @Override
+    public Supplier<PullTask> doOperation() {
+        return () -> {
+            // fetch submit data
+            MyOperation.DataDto task = fetch(); 
+            return task;
         };
     }
 
     @Override
-    public Void onException(Throwable throwable, DataDto dataDto) {
+    public Void onException(Throwable throwable, PullTask task) {
         log.error("e", throwable);
         return null;
-    }
-
-    @Override
-    public OperationProviders<RichSourceReader> loadOperation() {
-        return new OperationProviders<RichSourceReader>(new RichSourceReader()) {
-            @Override
-            public RichSourceReader get() {
-                return super.get();
-            }
-        };
     }
 
     @Data
     public static class DataDto {
 
-    }
-
-    @Data
-    public static class RichSourceReader {
-        // read mysql redis ...
-        public DataDto doSomeThing() {
-            return null;
-        }
     }
 
 }

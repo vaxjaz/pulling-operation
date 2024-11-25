@@ -2,20 +2,17 @@ package com.vaxjaz.polling.operation.ops;
 
 import com.vaxjaz.polling.operation.anno.PollingOpProperty;
 import com.vaxjaz.polling.operation.enums.PollingStrategyEnum;
-import com.vaxjaz.polling.operation.ops.provider.OperationProviders;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
+import java.util.function.Supplier;
 
 @Slf4j
-public abstract class AbstractOperation<T, R> implements Operation<T, R> {
+public abstract class AbstractOperation<T> implements Operation<T> {
 
-    private OperationProviders<R> operationProvider;
-
-    private long periodMillsSeconds = 2000L;
+    private Long periodMillsSeconds = 2000L;
 
     private Executor worker;
 
@@ -37,12 +34,19 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
     }
 
     @Override
-    public abstract Function<OperationProviders<R>, T> doOperation();
+    public void onSuccess(T t) {
+
+    }
+
+    @Override
+    public void submit(T t) {
+
+    }
+
+    @Override
+    public abstract Supplier<T> doOperation();
 
     private void run() {
-        if (Objects.isNull(operationProvider)) {
-            throw new RuntimeException("operationProvider is null");
-        }
         AtomicInteger taskSize = new AtomicInteger();
         AtomicInteger backPressure = new AtomicInteger();
         pullTask.scheduleAtFixedRate(() -> {
@@ -62,8 +66,8 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
             return;
         }
         try {
-            T apply = doOperation().apply(operationProvider);
-            doWork(backPressure, apply);
+            T apply = doOperation().get();
+            CompletableFuture<Void> future = doWork(backPressure, apply);
             switch (strategy) {
                 case FIXED_THEN_IMMEDIATELY:
                     if (Objects.nonNull(apply)) {
@@ -85,28 +89,25 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
         pullTask.schedule(() -> doPull(pullTaskSize, backPressure), 0, TimeUnit.MILLISECONDS);
     }
 
-    private void doWork(AtomicInteger backPressure, T apply) {
-        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-            if (Objects.nonNull(apply)) {
-                doOnNext(apply);
-            }
-        }, Objects.nonNull(worker) ? worker : ForkJoinPool.commonPool());
-        future.whenComplete((unused, throwable) -> {
+    private CompletableFuture<Void> doWork(AtomicInteger backPressure, T apply) {
+        return CompletableFuture.runAsync(() -> {
+                    if (Objects.nonNull(apply)) {
+                        doOnNext(apply);
+                    }
+                }, Objects.nonNull(worker) ? worker : ForkJoinPool.commonPool())
+                .whenComplete((unused, throwable) -> {
                     backPressure.decrementAndGet();
                     if (Objects.nonNull(throwable)) {
                         log.error("worker task error ", throwable);
+                    } else {
+                        onSuccess(apply);
                     }
                 })
-                .exceptionally(throwable -> onException(throwable, apply))
-        ;
+                .exceptionally(throwable -> onException(throwable, apply));
     }
 
 
     public void init() {
-        OperationProviders<R> providers = loadOperation();
-        if (Objects.isNull(providers)) {
-            throw new RuntimeException("operationProvider is null");
-        }
         PollingOpProperty property = this.getClass().getAnnotation(PollingOpProperty.class);
         if (Objects.nonNull(property)) {
             this.periodMillsSeconds = property.pullDuration();
@@ -114,10 +115,17 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
             this.workSize = property.workerTask();
             this.strategy = property.strategy();
         }
-        this.operationProvider = providers;
         customerPull(defaultPullTask());
         customerWorker(ForkJoinPool.commonPool());
         run();
+    }
+
+    protected void customerWorker(Executor worker) {
+        this.worker = worker;
+    }
+
+    protected void customerPull(ScheduledThreadPoolExecutor executor) {
+        this.pullTask = executor;
     }
 
     private ScheduledThreadPoolExecutor defaultPullTask() {
@@ -134,16 +142,4 @@ public abstract class AbstractOperation<T, R> implements Operation<T, R> {
                 new ThreadPoolExecutor.DiscardPolicy() // 自定义拒绝策略
         );
     }
-
-    @Override
-    public abstract OperationProviders<R> loadOperation();
-
-    protected void customerWorker(Executor worker) {
-        this.worker = worker;
-    }
-
-    protected void customerPull(ScheduledThreadPoolExecutor executor) {
-        this.pullTask = executor;
-    }
-
 }
