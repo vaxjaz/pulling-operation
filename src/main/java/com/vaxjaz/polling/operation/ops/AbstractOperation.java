@@ -134,9 +134,19 @@ public abstract class AbstractOperation<T> implements Operation<T> {
             this.workSize = property.workerTask();
             this.strategy = property.strategy();
         }
-        customerPull(defaultPullTask());
-        customerWorker(ForkJoinPool.commonPool());
+        ScheduledThreadPoolExecutor pull = customerPull();
+        this.pullTask = Objects.isNull(pull) ? defaultPullTask() : pull;
+        Executor task = customerWorker();
+        this.worker = Objects.isNull(task) ? ForkJoinPool.commonPool() : task;
         run();
+    }
+
+    protected Executor customerWorker() {
+        return null;
+    }
+
+    protected ScheduledThreadPoolExecutor customerPull() {
+        return null;
     }
 
     protected void customerWorker(Executor worker) {
