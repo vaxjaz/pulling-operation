@@ -149,14 +149,6 @@ public abstract class AbstractOperation<T> implements Operation<T> {
         return null;
     }
 
-    protected void customerWorker(Executor worker) {
-        this.worker = worker;
-    }
-
-    protected void customerPull(ScheduledThreadPoolExecutor executor) {
-        this.pullTask = executor;
-    }
-
     private ScheduledThreadPoolExecutor defaultPullTask() {
         return new ScheduledThreadPoolExecutor(
                 Math.min(5, pullSize), // 核心线程数
