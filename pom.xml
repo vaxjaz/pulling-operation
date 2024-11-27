@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.github.vaxjaz</groupId>
     <artifactId>polling-operation-starter</artifactId>
-    <version>1.0.7</version>
+    <version>1.1.0</version>
     <name>polling-operation</name>
     <description>polling-operation</description>
     <parent>
