@@ -82,7 +82,8 @@ public abstract class AbstractOperation<T> implements Operation<T> {
     private T pull(AtomicInteger pullTaskSize) {
         T apply = null;
         try {
-            apply = doOperation().get();
+            Supplier<T> supplier = doOperation();
+            apply = Objects.nonNull(supplier) ? supplier.get() : null;
             pullTaskSize.decrementAndGet();
         } catch (Throwable e) {
             log.error("e", e);
