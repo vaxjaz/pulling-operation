@@ -55,18 +55,21 @@ public abstract class AbstractOperation<T> implements Operation<T> {
     }
 
     private void doPull(AtomicInteger pullTaskSize, AtomicInteger backPressure) {
-        if (pullTaskSize.incrementAndGet() > pullSize) {
-            pullTaskSize.decrementAndGet();
+        if (pullTaskSize.get() > pullSize) {
             log.info("pull task size reach limited {}", pullTaskSize.get());
+            reSet(pullTaskSize);
             return;
         }
-        if (backPressure.incrementAndGet() > workSize) {
-            backPressure.decrementAndGet();
+        if (backPressure.get() > workSize) {
             log.info("worker task size reach limited {}", backPressure.get());
+            reSet(backPressure);
             return;
         }
         T apply = pull(pullTaskSize);
-        CompletableFuture<Void> future = doWork(backPressure, apply);
+        if (Objects.isNull(apply)) {
+            return;
+        }
+        CompletableFuture<Void> result = doWork(backPressure, apply);
         switch (strategy) {
             case FIXED_THEN_IMMEDIATELY:
                 if (Objects.nonNull(apply)) {
@@ -79,14 +82,22 @@ public abstract class AbstractOperation<T> implements Operation<T> {
         }
     }
 
+    private void reSet(AtomicInteger counter) {
+        int count = counter.get();
+        if (count == Integer.MAX_VALUE || count == Integer.MIN_VALUE) {
+            counter.set(0);
+        }
+    }
+
     private T pull(AtomicInteger pullTaskSize) {
         T apply = null;
         try {
+            pullTaskSize.incrementAndGet();
             Supplier<T> supplier = doOperation();
             apply = Objects.nonNull(supplier) ? supplier.get() : null;
-            pullTaskSize.decrementAndGet();
         } catch (Throwable e) {
             log.error("e", e);
+        } finally {
             pullTaskSize.decrementAndGet();
         }
         return apply;
@@ -98,19 +109,22 @@ public abstract class AbstractOperation<T> implements Operation<T> {
 
     private CompletableFuture<Void> doWork(AtomicInteger backPressure, T apply) {
         return CompletableFuture.runAsync(() -> {
-                    if (Objects.nonNull(apply)) {
-                        doOnNext(apply);
-                    }
+                    backPressure.incrementAndGet();
+                    doOnNext(apply);
                 }, Objects.nonNull(worker) ? worker : ForkJoinPool.commonPool())
-                .whenComplete((unused, throwable) -> {
-                    backPressure.decrementAndGet();
-                    if (Objects.nonNull(throwable)) {
-                        log.error("worker task error ", throwable);
-                    } else if (Objects.nonNull(apply)) {
-                        onSuccess(apply);
+                .handle((unused, throwable) -> {
+                    try {
+                        if (Objects.nonNull(throwable)) {
+                            log.error("worker task error ", throwable);
+                            return onException(throwable, apply);
+                        } else {
+                            onSuccess(apply);
+                        }
+                        return null;
+                    } finally {
+                        backPressure.decrementAndGet();
                     }
-                })
-                .exceptionally(throwable -> onException(throwable, apply));
+                });
     }
 
 
