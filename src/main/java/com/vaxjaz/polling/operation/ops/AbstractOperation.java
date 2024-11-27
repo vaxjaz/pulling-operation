@@ -106,8 +106,8 @@ public abstract class AbstractOperation<T> implements Operation<T> {
     }
 
     private CompletableFuture<Void> doWork(AtomicInteger backPressure, T apply) {
+        backPressure.incrementAndGet();
         return CompletableFuture.runAsync(() -> {
-                    backPressure.incrementAndGet();
                     doOnNext(apply);
                 }, Objects.nonNull(worker) ? worker : ForkJoinPool.commonPool())
                 .handle((unused, throwable) -> {
