@@ -17,19 +17,18 @@ public class OperationAutoConfig {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnBean({AbstractOperation.class})
-    public NoneUsed redisCustomerConfig(List<AbstractOperation> operations) {
-        operations.forEach(operation -> {
-            operation.init();
-            log.info("operation task run success {}", operation.getClass());
+    @ConditionalOnBean(AbstractOperation.class)
+    public Void redisCustomerConfig(List<AbstractOperation> operations) {
+        operations.parallelStream().forEach(operation -> {
+            String name = operation.getClass().getName();
+            try {
+                operation.init();
+                log.info("operation task run success {}", name);
+            } catch (Throwable e) {
+                log.error("operation task run error {}", name, e);
+            }
         });
-        return new NoneUsed();
+        return null;
     }
-
-
-    public static class NoneUsed {
-
-    }
-
 
 }

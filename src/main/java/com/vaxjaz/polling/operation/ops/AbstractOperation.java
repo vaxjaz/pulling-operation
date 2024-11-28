@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -125,8 +126,20 @@ public abstract class AbstractOperation<T> implements Operation<T> {
                 });
     }
 
+    private final AtomicBoolean running = new AtomicBoolean(false);
 
     public void init() {
+        if (running.compareAndSet(false, true)) {
+            initProperty();
+            ScheduledThreadPoolExecutor pull = customerPull();
+            this.pullTask = Objects.isNull(pull) ? defaultPullTask() : pull;
+            Executor task = customerWorker();
+            this.worker = Objects.isNull(task) ? ForkJoinPool.commonPool() : task;
+            run();
+        }
+    }
+
+    private void initProperty() {
         PollingOpProperty property = this.getClass().getAnnotation(PollingOpProperty.class);
         if (Objects.nonNull(property)) {
             this.periodMillsSeconds = property.pullDuration();
@@ -134,11 +147,6 @@ public abstract class AbstractOperation<T> implements Operation<T> {
             this.workSize = property.workerTask();
             this.strategy = property.strategy();
         }
-        ScheduledThreadPoolExecutor pull = customerPull();
-        this.pullTask = Objects.isNull(pull) ? defaultPullTask() : pull;
-        Executor task = customerWorker();
-        this.worker = Objects.isNull(task) ? ForkJoinPool.commonPool() : task;
-        run();
     }
 
     protected Executor customerWorker() {
@@ -163,4 +171,5 @@ public abstract class AbstractOperation<T> implements Operation<T> {
                 new ThreadPoolExecutor.DiscardPolicy() // 自定义拒绝策略
         );
     }
+
 }
